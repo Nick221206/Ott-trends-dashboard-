@@ -3,6 +3,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import pickle
+import os
 
 #  PAGE CONFIG 
 st.set_page_config(
@@ -22,13 +23,19 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
+#  SAFE FILE PATHS (works both locally AND on Streamlit Cloud) 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(BASE_DIR, "..", "data")
+MODEL_DIR = os.path.join(BASE_DIR, "..", "models")
+
+
 #  LOAD DATA 
 @st.cache_data
 def load_data():
-    netflix = pd.read_csv('../data/netflix_clean.csv')
-    trending = pd.read_csv('../data/tmdb_trending.csv')
-    forecast = pd.read_csv('../data/forecast_results.csv')
-    top_genres = pd.read_csv('../data/top_genres.csv')
+    netflix = pd.read_csv(os.path.join(DATA_DIR, "netflix_clean.csv"))
+    trending = pd.read_csv(os.path.join(DATA_DIR, "tmdb_trending.csv"))
+    forecast = pd.read_csv(os.path.join(DATA_DIR, "forecast_results.csv"))
+    top_genres = pd.read_csv(os.path.join(DATA_DIR, "top_genres.csv"))
     return netflix, trending, forecast, top_genres
 
 netflix, trending, forecast, top_genres = load_data()
@@ -47,7 +54,7 @@ page = st.sidebar.radio("Navigate to:", [
 
 
 
-# PAGE 1: OVERVIEW
+# OVERVIEW
 
 if page == "📊 Overview":
     st.title("OTT Content Overview")
@@ -81,7 +88,7 @@ if page == "📊 Overview":
 
 
 
-# PAGE 2: TREND VIEWER
+#  TREND VIEWER
 
 elif page == "📈 Trend Viewer":
     st.title("Content Trends Over Time")
@@ -121,12 +128,12 @@ elif page == "📈 Trend Viewer":
 
 
 
-# PAGE 3: PREDICTION PANEL
+#  PREDICTION PANEL
 
 elif page == "🔮 Prediction Panel":
     st.title("Trend Predictions")
 
-    # ── FORECAST CHART ──────────────────────────────────────────
+    #  FORECAST CHART 
     st.subheader("Genre Trend Forecast (Next 3 Years)")
 
     try:
@@ -159,7 +166,7 @@ elif page == "🔮 Prediction Panel":
 
     st.markdown("---")
 
-    #  RATING PREDICTOR 
+    #  RATING PREDICTOR
     st.subheader(" Predict If a Title Will Be Highly Rated")
 
     col1, col2, col3 = st.columns(3)
@@ -172,7 +179,7 @@ elif page == "🔮 Prediction Panel":
 
     if st.button("🔮 Predict Rating", type="primary"):
         try:
-            with open('../models/rating_predictor.pkl', 'rb') as f:
+            with open(os.path.join(MODEL_DIR, "rating_predictor.pkl"), 'rb') as f:
                 model = pickle.load(f)
 
             prediction = model.predict([[popularity, vote_count, year]])[0]
@@ -183,15 +190,14 @@ elif page == "🔮 Prediction Panel":
                 st.warning(" Prediction: **Average or Below Average**")
 
         except FileNotFoundError:
-            st.error(" Model file not found at '../models/rating_predictor.pkl'. "
-                      "Make sure you saved it in Phase 4, Step 17, and that you're "
-                      "running streamlit from inside the dashboard/ folder.")
+            st.error(" Model file not found. Make sure 'rating_predictor.pkl' "
+                      "was committed and pushed inside the models/ folder.")
         except Exception as e:
             st.error(f" Prediction failed: {e}")
 
 
 
-# PAGE 4: SEARCH & FILTER
+#  SEARCH & FILTER
 
 elif page == "🔍 Search & Filter":
     st.title("Search & Filter Content")
@@ -203,8 +209,6 @@ elif page == "🔍 Search & Filter":
     with col2:
         type_filter = st.selectbox("Type", ["All", "Movie", "TV Show"])
     with col3:
-        # FIX: convert all rating values to string first so sorted()
-        # doesn't crash on mixed data types (e.g. text + NaN + numbers)
         rating_options = netflix['rating'].dropna().astype(str).unique().tolist()
         rating_filter = st.selectbox("Rating", ["All"] + sorted(rating_options))
 
